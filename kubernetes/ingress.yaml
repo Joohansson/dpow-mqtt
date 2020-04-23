@@ -10,7 +10,7 @@ spec:
   tls:
   - hosts:
     - bpow.banano.cc
-    secretName: bpow-banano-cc-server-secret
+    secretName: bpow-banano-cc-new-server-secret
   rules:
   - host: bpow.banano.cc
     http:
