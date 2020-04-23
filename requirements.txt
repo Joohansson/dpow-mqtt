@@ -1,8 +1,8 @@
 configparser
 flask
-gunicorn∂
+gunicorn
 paho-mqtt
 redis
 requests
 python-rapidjson
-nanolib
+gevent

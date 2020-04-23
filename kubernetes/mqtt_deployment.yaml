@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: boompow-mqtt
+  namespace: boompow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: boompow-mqtt
+  template:
+    metadata:
+      labels:
+        app: boompow-mqtt
+    spec:
+      containers:
+      - name: boompow-mqtt
+        image: replaceme
+        command: ["/bin/bash", "-c"]
+        args: ["cp /secrets/config.ini /usr/src/app/config.ini; python mqtt.py"]
+        ports:
+        - containerPort: 5000
+          name: app
+        volumeMounts:
+          - name: secrets
+            mountPath: /secrets
+            readOnly: true
+      volumes:
+      - name: secrets
+        secret:
+          secretName: config.ini

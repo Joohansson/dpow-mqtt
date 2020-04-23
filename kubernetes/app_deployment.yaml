@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: boompow-dash
+  namespace: boompow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: boompow-dash
+  template:
+    metadata:
+      labels:
+        app: boompow-dash
+    spec:
+      containers:
+      - name: boompow-dash
+        image: replaceme
+        command: ["/bin/bash", "-c"]
+        args: ["cp /secrets/config.ini /usr/src/app/config.ini; gunicorn -k gevent -w 1 --bind 0.0.0.0:5000 --timeout 180 --access-logfile - dpow:app"]
+        ports:
+        - containerPort: 5000
+          name: app
+        volumeMounts:
+          - name: secrets
+            mountPath: /secrets
+            readOnly: true
+      volumes:
+      - name: secrets
+        secret:
+          secretName: config.ini

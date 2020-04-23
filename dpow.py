@@ -1,3 +1,6 @@
+from gevent import monkey
+monkey.patch_all()
+
 from datetime import datetime
 from flask import Flask, render_template
 

@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: boompow-dash-ingress
+  namespace: boompow
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+  - hosts:
+    - bpow.appditto.com
+    secretName: bpow-appditto-com-server-secret
+  rules:
+  - host: bpow.appditto.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: boompow-dash
+          servicePort: 5000
