@@ -9,10 +9,10 @@ metadata:
 spec:
   tls:
   - hosts:
-    - bpow.appditto.com
-    secretName: bpow-appditto-com-server-secret
+    - bpow.banano.cc
+    secretName: bpow-banano-cc-server-secret
   rules:
-  - host: bpow.appditto.com
+  - host: bpow.banano.cc
     http:
       paths:
       - path: /

@@ -4,3 +4,4 @@ resources:
 - app_deployment.yaml
 - mqtt_deployment.yaml
 - svc.yaml
+- ingress.yaml
