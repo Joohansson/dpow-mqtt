@@ -1,17 +1,17 @@
 #!/home/dpow/dpow-mqtt/venv/bin/python3
 
 from datetime import datetime
-from logging.handlers import TimedRotatingFileHandler
 
 import configparser
-import json
+import rapidjson as json
 import logging
 import os
 import paho.mqtt.client as mqtt
 import redis
 import requests
+import sys
 
-import modules.db as db
+dt_mode = json.DM_ISO8601 | json.DM_NAIVE_IS_UTC
 
 # Read config and parse constants
 config = configparser.ConfigParser()
@@ -20,13 +20,11 @@ config.read('{}/config.ini'.format(os.getcwd()))
 logger = logging.getLogger("dpow_log")
 logger.setLevel(logging.INFO)
 
-handler = TimedRotatingFileHandler('{}/logs/{:%Y-%m-%d}-mqtt.log'.format(os.getcwd(), datetime.now()),
-                                   when="d",
-                                   interval=1,
-                                   backupCount=5)
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(filename)s@%(funcName)s:%(lineno)s:%(message)s", "%Y-%m-%d %H:%M:%S %z")
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-NODE_IP = config.get('nano', 'node_ip')
 POW_USER = config.get('pow', 'username')
 POW_PW = config.get('pow', 'password')
 MQTT_IP = config.get('pow', 'mqtt_ip')
@@ -36,25 +34,11 @@ REDIS_PORT = int(config.get('redis', 'port'))
 REDIS_DB = int(config.get('redis', 'db'))
 
 
-def get_work_mult():
-    """
-    When a result message is received, retrieve the work multiplier
-    """
-    data = {
-        "action": "active_difficulty"
-    }
-    json_request = json.dumps(data)
-    r = requests.post('{}'.format(NODE_IP), data=json_request)
-    rx = r.json()
-
-    return rx['multiplier']
-
-
 def on_connect(client, userdata, flags, rc):
     """
     On connection to the MQTT server, automatically subscribe to merchant_order_requests topic
     """
-    logger.info("{}: Connected to DPOW Server with result code {}".format(datetime.now(), str(rc)))
+    logger.info("{}: Connected to DPOW Server with result code {}".format(datetime.utcnow(), str(rc)))
     client.subscribe('work/#')
     client.subscribe('result/#')
     client.subscribe('statistics')
@@ -75,7 +59,7 @@ def on_message(client, userdata, msg):
             message = msg.payload.decode().split(',')
             work_hash = message[0]
             work_difficulty = message[1]
-            mapping = {'work_type': work_type, 'work_difficulty': work_difficulty, 'timestamp': str(datetime.now())}
+            mapping = {'work_type': work_type, 'work_difficulty': work_difficulty, 'timestamp': str(datetime.utcnow())}
             r.hmset(work_hash, mapping)
 
         elif topic[0] == 'result':
@@ -86,38 +70,49 @@ def on_message(client, userdata, msg):
             work_client = message[2]
 
             hmreturn = r.hmget(work_hash, ['work_type', 'timestamp', 'work_difficulty'])
-
             # Multiple results are sent for 1 work hash, ignore if the result has already been logged.
             if hmreturn == [None, None, None]:
                 return
 
-            work_type = hmreturn[0].decode()
             request_time = datetime.strptime(hmreturn[1].decode(), '%Y-%m-%d %H:%M:%S.%f')
-            work_difficulty = hmreturn[2].decode()
 
-            if work_difficulty != 'ffffffc000000000':
-                # Add work multiplier logic for V19
-                # work_multiplier = get_work_mult()
-                work_multiplier = "1"
-            else:
-                work_multiplier = "1"
+            # Set client activity
+            r.hset("clientactivity", work_client, json.dumps({
+                "last_active": datetime.utcnow()
+            }, datetime_mode=dt_mode))
 
-            # Get the time difference between the request and result, convert to a rounded number
-            time_diff_micro = (datetime.now() - request_time).microseconds
+            # Set PoW keys, 1 with expiry 2 days, one with expiry 1 days
+            r.set(f"pow24h:{work_hash}", work_hash, ex=86400)
+            r.set(f"pow48h:{work_hash}", work_hash, ex=172800)
+
+            # Get time this request took
+            time_diff_micro = (datetime.utcnow() - request_time).microseconds
             time_difference = round(time_diff_micro * (10 ** -6), 4)
-
-            # Update the DB and ignore if the work hash already exists in the DB.
-            client_sql = "INSERT IGNORE INTO dpow_mqtt.clients SET client_id = %s"
-            request_sql = ("INSERT IGNORE INTO requests "
-                           "(hash, client, work_type, work_value, work_difficulty, multiplier, response_length) "
-                           "VALUES (%s, %s, %s, %s, %s, %s, %s)")
-
-            db.set_db_data(client_sql, [work_client, ])
-            db.set_db_data(request_sql, [work_hash, work_client, work_type, work_value,
-                                         work_difficulty, work_multiplier, time_difference])
-            
-            logger.info("{}: result received for message: {}".format(datetime.now(), message))
-
+            """
+            avg = r.get("avgresponse")
+            new = {}
+            if avg is not None:
+                avg = json.loads(avg)
+                # Reset average after an hour
+                if (datetime.utcnow() - avg['created']).total_seconds() > 3600:
+                    r.delete("avgresponse")
+                    new['created'] = datetime.utcnow()
+                    new['count'] = 1
+                    new['time_total'] = time_difference
+                else:
+                    new['count'] = avg['count'] + 1
+                    new['time_total'] += avg['time_total'] + 1
+            else:
+                new = {
+                    'created': datetime.utcnow(),
+                    'count': 1,
+                    'time_total': time_difference
+                }
+            r.set("avgresponse", json.dumps(new, datetime_mode=dt_mode))
+            """
+            # Set live chart data
+            r.lpush("live_chart_prefill", str(time_difference))
+            r.ltrim("live_chart_prefill", 0, 25)
             # Once logged successfully, delete the work hash from redis.
             r.delete(work_hash)
 
@@ -127,23 +122,7 @@ def on_message(client, userdata, msg):
             # It just seems easier/faster to store the total paid aggregate in redis
             if 'total_paid_banano' in stats:
                 r.set("bpowdash:totalpaidban", str(stats['total_paid_banano']))
-            try:
-                db.set_services(stats['services']['public'])
-
-                private_call = ("INSERT INTO services"
-                                " (service_username, service_name, service_ondemand, service_precache, private_count)"
-                                " VALUES ('private', 'private', %s, %s, %s)"
-                                " ON DUPLICATE KEY UPDATE service_ondemand = VALUES(service_ondemand),"
-                                " service_precache = VALUES(service_precache),"
-                                " private_count = VALUES(private_count)")
-                private_stats = stats['services']['private']
-                db.set_db_data(private_call, [private_stats['ondemand'],
-                                              private_stats['precache'],
-                                              private_stats['count']])
-
-            except Exception as e:
-                logger.info("Error logger.infoing public services: {}".format(e))
-                logger.info(stats)
+            r.set("services", json.dumps(stats['services']))
 
         elif topic[0] == 'client':
             try:
@@ -152,23 +131,22 @@ def on_message(client, userdata, msg):
                 result = json.loads(msg.payload.decode())
                 address = topic[1]
                 if 'precache' in result:
-                    precache = result['precache']
+                    precache = int(result['precache'])
                 else:
                     precache = 0
                 if 'ondemand' in result:
-                    ondemand = result['ondemand']
+                    ondemand = int(result['ondemand'])
                 else:
                     ondemand = 0
 
-                client_call = ("INSERT INTO clients"
-                               " (client_id, precache, ondemand)"
-                               " VALUES (%s, %s, %s)"
-                               " ON DUPLICATE KEY UPDATE precache = VALUES(precache),"
-                               " ondemand = VALUES(ondemand);")
-                db.set_db_data(client_call, [address, precache, ondemand])
+                r.hset("clientstats", address, json.dumps({
+                    "total": ondemand+precache,
+                    "precache": precache,
+                    "ondemand": ondemand
+                }))
 
             except Exception as e:
-                logger.info("error logging client info: {}".format(e))
+                logger.exception("error logging client info: {}".format(e))
                 logger.info(msg.payload)
         else:
             try:
@@ -179,12 +157,9 @@ def on_message(client, userdata, msg):
                 logger.info("exception: {}".format(e))
 
     except Exception as e:
-        logger.info("Error: {}".format(e))
-
+        logger.exception("Error: {}".format(e))
 
 if __name__ == "__main__":
-    db.db_init()
-
     c = mqtt.Client()
 
     c.on_connect = on_connect

@@ -1,8 +1,8 @@
 configparser
 flask
-gunicorn
-mysqlclient
+gunicorn∂
 paho-mqtt
 redis
 requests
-simplejson
+python-rapidjson
+nanolib
