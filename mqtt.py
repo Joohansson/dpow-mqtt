@@ -69,17 +69,17 @@ def on_message(client, userdata, msg):
             work_value = message[1]
             work_client = message[2]
 
+            # Set client activity
+            r.hset("clientactivity", work_client, json.dumps({
+                "last_active": datetime.utcnow()
+            }, datetime_mode=dt_mode))
+
             hmreturn = r.hmget(work_hash, ['work_type', 'timestamp', 'work_difficulty'])
             # Multiple results are sent for 1 work hash, ignore if the result has already been logged.
             if hmreturn == [None, None, None]:
                 return
 
             request_time = datetime.strptime(hmreturn[1].decode(), '%Y-%m-%d %H:%M:%S.%f')
-
-            # Set client activity
-            r.hset("clientactivity", work_client, json.dumps({
-                "last_active": datetime.utcnow()
-            }, datetime_mode=dt_mode))
 
             # Set PoW keys, 1 with expiry 2 days, one with expiry 1 days
             r.set(f"pow24h:{work_hash}", work_hash, ex=86400)
