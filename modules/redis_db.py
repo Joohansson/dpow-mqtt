@@ -61,21 +61,21 @@ def get_unlisted_count():
     return len(loaded['private'])
 
 def get_pow_count_24hr():
-    # Cache th
-    cached = None# redisInst.get("pow24hcache")
+    # Cache this
+    cached = redisInst.get("pow24hcache")
     if cached is None:
         ret = len(list(redisInst.scan_iter(match='pow24h*')))
-        #redisInst.set("pow24hcache", str(ret), ex=100)
+        redisInst.set("pow24hcache", str(ret), ex=300)
     else:
         ret = int(cached)
     return ret
 
 def get_pow_count_48hr():
     # Cache this
-    cached = None#redisInst.get("pow48hcache")
+    cached = redisInst.get("pow48hcache")
     if cached is None:
         ret = len(list(redisInst.scan_iter(match='pow48h*')))
-        #redisInst.set("pow48hcache", str(ret), ex=100)
+        redisInst.set("pow48hcache", str(ret), ex=300)
     else:
         ret = int(cached)
     return ret
