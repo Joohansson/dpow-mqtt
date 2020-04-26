@@ -49,7 +49,7 @@ def upcheck():
 def index():
     # Get current POW count
     pow_count = rdb.get_pow_count_24hr()
-    work_24hr = pow_count - rdb.get_pow_count_48hr()
+    work_24hr = pow_count - (rdb.get_pow_count_48hr() - pow_count)
 
     # Get total distributed
     total_paid_banano = redisInst.get("bpowdash:totalpaidban")
