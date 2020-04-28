@@ -75,7 +75,8 @@ def get_pow_counts():
         else:
             to_delete.append(hash)
 
-    redisInst.hdel("pow_count", *to_delete)
+    if len(to_delete) > 0:
+        redisInst.hdel("pow_count", *to_delete)
 
     return pow24, pow48
 
