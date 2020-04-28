@@ -67,7 +67,7 @@ def get_pow_counts():
     to_delete = []
     for hash, pow in all_pow.items():
         j = json.loads(pow, datetime_mode=dt_mode)
-        delta = (datetime.datetime.utcnow() - j['dt']).total_seconds() 
+        delta = (datetime.datetime.utcnow() - j['dt'].replace(tzinfo=None)).total_seconds() 
         if delta <= 86400:
             pow24 += 1
         elif delta > 86400 and delta <= 172800:
