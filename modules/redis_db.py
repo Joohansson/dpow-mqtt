@@ -60,25 +60,24 @@ def get_unlisted_count():
     loaded = json.loads(service)
     return len(loaded['private'])
 
-def get_pow_count_24hr():
-    # Cache th
-    cached = None# redisInst.get("pow24hcache")
-    if cached is None:
-        ret = len(list(redisInst.scan_iter(match='pow24h*')))
-        #redisInst.set("pow24hcache", str(ret), ex=100)
-    else:
-        ret = int(cached)
-    return ret
+def get_pow_counts():
+    all_pow = redisInst.hgetall("pow_count")
+    pow24 = 0
+    pow48 = 0
+    to_delete = []
+    for hash, pow in all_pow.items():
+        j = json.loads(pow, datetime_mode=dt_mode)
+        delta = (datetime.datetime.utcnow() - j['dt']).total_seconds() 
+        if delta <= 86400:
+            pow24 += 1
+        elif delta > 86400 and delta <= 172800:
+            pow48 += 1
+        else:
+            to_delete.append(hash)
 
-def get_pow_count_48hr():
-    # Cache this
-    cached = None#redisInst.get("pow48hcache")
-    if cached is None:
-        ret = len(list(redisInst.scan_iter(match='pow48h*')))
-        #redisInst.set("pow48hcache", str(ret), ex=100)
-    else:
-        ret = int(cached)
-    return ret
+    redisInst.hdel("pow_count", *to_delete)
+
+    return pow24, pow48
 
 def get_avg_response() -> float:
     avg = redisInst.get("avgresponse")

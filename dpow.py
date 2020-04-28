@@ -47,9 +47,10 @@ def upcheck():
 @app.route("/")
 @app.route("/index")
 def index():
+    pow24, pow48 = rdb.get_pow_counts()
     # Get current POW count
-    pow_count = rdb.get_pow_count_24hr()
-    work_24hr = pow_count - rdb.get_pow_count_48hr()
+    pow_count = pow24
+    work_24hr = pow_count - pow48
 
     # Get total distributed
     total_paid_banano = redisInst.get("bpowdash:totalpaidban")

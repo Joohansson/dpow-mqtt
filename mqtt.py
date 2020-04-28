@@ -82,8 +82,9 @@ def on_message(client, userdata, msg):
             request_time = datetime.strptime(hmreturn[1].decode(), '%Y-%m-%d %H:%M:%S.%f')
 
             # Set PoW keys, 1 with expiry 2 days, one with expiry 1 days
-            r.set(f"pow24h:{work_hash}", work_hash, ex=86400)
-            r.set(f"pow48h:{work_hash}", work_hash, ex=172800)
+            r.hset("pow_count", work_hash, json.dumps({
+                "dt": datetime.utcnow()
+            }, datetime_mode=dt_mode))
 
             # Get time this request took
             time_diff_micro = (datetime.utcnow() - request_time).microseconds
