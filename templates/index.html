@@ -32,7 +32,7 @@
         </div>
         <div class="powtooltip">
             <i class="far fa-question-circle"></i>
-            <span class="powtooltiptext">Total number of services utilizing the BPoW network.</span>
+            <span class="powtooltiptext">Total number of services utilizing the dPoW network.</span>
         </div>
         <div><br></div>
           <div style="display:inline-block">
@@ -48,7 +48,7 @@
         </div>
         <div class="powtooltip">
             <i class="far fa-question-circle"></i>
-            <span class="powtooltiptext">Total number of work requests processed by the BPoW network in the past 24 hours.</span>
+            <span class="powtooltiptext">Total number of work requests processed by the dPoW network in the past 24 hours.</span>
         </div>
         <div><br></div>
           <div style="display:inline-block">
@@ -69,11 +69,11 @@
         <div class="client-card-header card-four"></div>
         <div class="card-body">
             <div class="card-header-text">
-                <p class="card-text">Total BAN Distributed</p>
+                <p class="card-text">Total NANO Distributed</p>
             </div>
             <div class="powtooltip">
                 <i class="far fa-question-circle"></i>
-                <span class="powtooltiptext">The amount of BANANO that has been distributed to all of the BoomPow workers.</span>
+                <span class="powtooltiptext">The amount of NANO that has been distributed to all of the dPow workers.</span>
             </div>
             <div><br></div>
             <div style="display:inline-block; text-align: center;">
@@ -121,7 +121,7 @@
               <div class="card-body sc-card-body">
                 <div class="powtooltip" style="padding-bottom:20px;">
                     <i class="far fa-question-circle" style="position: relative;" ></i>
-                    <span class="powtooltiptext">A list of Services utilizing the BPoW Network.  If a website is provided, clicking on the Service name will send you to their home page.</span>
+                    <span class="powtooltiptext">A list of Services utilizing the dPoW Network.  If a website is provided, clicking on the Service name will send you to their home page.</span>
                 </div><br>
                 <table>
                     <thead>
@@ -169,7 +169,7 @@
                   <div class="card-body sc-card-body">
                     <div class="powtooltip" style="padding-bottom:20px;">
                       <i class="far fa-question-circle"></i>
-                      <span class="powtooltiptext">A ranked list of payout addresses for clients providing work.  Clicking on the address will take you to Banano Creeper to see the payouts provided.</span>
+                      <span class="powtooltiptext">A ranked list of payout addresses for clients providing work.  Clicking on the address will take you to nanolooker to see the payouts provided.</span>
                     </div>
                     <table style="overflow-wrap: break-word; max-width: 100%;">
                         <thead>
@@ -192,7 +192,7 @@
                         {% for row in clients %}
                         <tr class="client_tr">
                             <td class="client_td py-2"><b>{{loop.index}}</b></td>
-                            <td class="py-2"><a href="https://creeper.banano.cc/explorer/account/{{row['address']}}"><u>{{row['address'][:7]}}...{{row['address'][-5:]}}</u></a></td>
+                            <td class="py-2"><a href="https://nanolooker.com/account/{{row['address']}}" target="_blank"><u>{{row['address'][:7]}}...{{row['address'][-5:]}}</u></a></td>
                             {% if 'precache' in row %}
                             <td class="client_td py-2 pulse" id="{{'{}-p'.format(row['address'])}}">{{row['precache']}}</td>
                             {% else %}
@@ -218,12 +218,17 @@
 
 
 <div class="footer-text">
+    <div style="display: inline-grid">
+        <div class="powtooltip">
+            <i class="far fa-question-circle"></i>
+            <span class="powtooltiptext">Donations are used to pay the server costs and for payouts to Proof of Work clients</span>
+            <a class="donate-link" href="nano:nano_xxx"><div class="donate-ban-button" style="display: inline-block; font-size: initial;">Donate <strong>NANO to dPoW</strong></div></a>
+        </div>
+        <img class="donate-qr" src="/static/dpow_donate_qr.png">
+    </div>
+    <br><br>
     <small>Developed by <strong>Andrew Mitchell.</strong><br>
-      View my other projects at <a href="https://andrewgmitchell.com">andrewgmitchell.com</a><br><br>
-      <div style="display: inline-block">
-          <a class="donate-link" href="ban:ban_1kyxbsqfbc4fpydp5355dznrhhjts1tskgtykicsshwd769owjei17nmgsx3"><div class="donate-ban-button">Donate <strong>BAN</strong></div></a>
-      </div>
-      <br><br>
+    View my other projects at <a href="https://andrewgmitchell.com">andrewgmitchell.com</a><br><br>
     <!--If you would like to donate directly to me for the Dashboard, you can send Banano to <a href="ban:ban_1kyxbsqfbc4fpydp5355dznrhhjts1tskgtykicsshwd769owjei17nmgsx3">ban_1kyxbsqfbc4fpydp5355dznrhhjts1tskgtykicsshwd769owjei17nmgsx3</a>-->
 </div>
 </body>

@@ -12,10 +12,10 @@
                 url: '/upcheck',
                 success: function (data) {
                     if (data == 'up') {
-                        $('#status-indicator').html('<span class="status-ok status-button">Status: <strong>Online</strong></a>');
+                      $('#status-indicator').html('<span class="status-ok status-button">Status: Online</a>');
                     }
                     else {
-                        $('#status-indicator').html('<span class="status-down status-button">Status: <strong>Online</strong></a>');
+                        $('#status-indicator').html('<span class="status-down status-button">Status: Offline</a>');
                     }
                 },
                 complete: function (data) {
@@ -30,14 +30,12 @@
 
 <script>
 $(document).ready(function() {
-  resize_to_fit('#pow_count', '#pow_count_body');
   var pagelength = 10;
   var service_pageIndex = 1;
   var client_pageIndex = 1;
   var client_length = $('.client_tr').length
   var service_length = $('.service_tr').length
   var load_time = Math.round((new Date()).getTime() / 1000);
-
   // setTimeout(fetchdata(load_time), 5000);
   if(client_length <= pagelength){
     $('#loadMoreClients').hide()
@@ -76,7 +74,6 @@ $(document).ready(function() {
       $('#loadMoreClients').text("Load More ...");
     }
   });
-  /*
   $("#avgDay").click(function(){
     if(!$(this).hasClass("avgPowButtonActive")){
       $(this).addClass("avgPowButtonActive");
@@ -166,11 +163,11 @@ $(document).ready(function() {
                 }];
       avgPowChart.update();
     }
-  });*/
+  });
 });
 /* function fetchdata(load_time) {
     $.ajax({
-        url: "https://distributedpow.tk/get_updates",
+        url: "https://dpow.nanos.cc/get_updates",
         type: "get",
         data: { load_time: load_time },
         dataType: "json",
@@ -188,19 +185,16 @@ $(document).ready(function() {
 } */
 
 var work_timing = [];
-var ctx = document.getElementById('wsChart').getContext("2d");
-var yellow_gradient = ctx.createLinearGradient(0, 0, 0, 500);
-yellow_gradient.addColorStop(0, 'rgba(255, 236, 106, 0.6)');   
-yellow_gradient.addColorStop(1, 'rgba(255, 236, 106, 0)');
-var wsChart = new Chart(ctx, {
+
+var wsChart = new Chart(document.getElementById('wsChart'), {
   type: 'line',
   data: {
     labels: [],
     datasets: [{
       label: 'Response Time',
       data: {{live_chart_prefill}},
-      backgroundColor: yellow_gradient,
-      borderColor: 'rgba(251, 221, 17, 1)',
+      backgroundColor: 'rgba(54, 162, 235, 0.2)',
+      borderColor: 'rgba(54, 162, 235, 1)',
       borderWidth: 1
     }]
   },
@@ -236,18 +230,10 @@ for (let i = 25; i > 0; i--) {
   wsChart.update();
 }
 
-function resize_to_fit(x, y){
-    var fontsize = $(x).css('font-size');
-
-    if($(x).width() >= $(y).width()){
-        $(x).css('fontSize', parseFloat(fontsize) - 1);
-        resize_to_fit(x, y);
-    }
-}
-
 var work_map = new Map();
 
-var client = mqtt.connect('mqtts://bpowinterface:TBAv6r9e6AKuXA9W@bpow.banano.cc/mqtt/')
+var client = mqtt.connect('wss://client:client@dpow-api.nanos.cc')
+//var client = mqtt.connect('mqtts://bpowinterface:TBAv6r9e6AKuXA9W@bpow.banano.cc/mqtt/')
 client.on("connect", function () {
     console.log('MQTT connected')
 
@@ -287,6 +273,7 @@ function initMqtt(){
       work_map.set(block_hash, timestamp);
     } else if (message_type == 'result') {
 
+      // Currently don't get the result topic for some reason so this is put in the client message
       var splits = payload.split(',');
       var client = splits[1];
       var block_hash = splits[0];
@@ -353,8 +340,48 @@ function initMqtt(){
           $("#" + client + "-o").css("color","#CFCED9");
         }, 1000);
       }
+      
+      var obj = JSON.parse(payload);
+      var overall_pow = parseInt($("#pow_count").text());
+      var pow_24hr = parseInt($("#pow_24hr").text());
 
-    } else if (message_type = 'service') {
+      var block_hash = obj.block_rewarded;
+      if (!work_map.has(block_hash)) {
+        console.log('result without logging request: ' + block_hash);
+        return;
+      }
+
+      var req_time = work_map.get(block_hash);
+
+      var ms_diff = Math.abs(req_time - timestamp);
+      var second_diff = ms_diff / 1000;
+      second_diff = second_diff.toFixed(3);
+
+      if (pow_24hr == -1) {
+        $("#pow_24hr").removeClass("dpow-bad");
+        $("#pow_24hr").addClass("dpow-none");
+      } else if (overall_pow == 0) {
+        $("#pow_24hr").removeClass("dpow-none");
+        $("#pow_24hr").addClass("dpow-good");
+      }
+
+      overall_pow++;
+      pow_24hr++;
+
+      $("#pow_count").text(overall_pow);
+      $("#pow_24hr").text(pow_24hr);
+
+      wsChart.data.datasets[0].data.push(second_diff)
+
+      if (wsChart.data.datasets[0].data.length > 25) {
+        wsChart.data.datasets[0].data.shift();
+      }
+
+      wsChart.update();
+
+      work_map.delete(block_hash);
+
+    } else if (message_type == 'service') {
       var service_name = topic_split[1];
       var service_pow = +$("[id='" + service_name + "']").text();
       service_pow++;

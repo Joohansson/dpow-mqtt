@@ -37,7 +37,7 @@ app = Flask(__name__)
 
 @app.route("/upcheck")
 def upcheck():
-    post_url = "https://bpow.banano.cc/upcheck/"
+    post_url = "https://dpow-api.nanos.cc/upcheck/"
     response = requests.get(post_url)
     if response.text != 'up':
         return 'Offline'
