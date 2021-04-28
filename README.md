@@ -32,6 +32,10 @@ Steps:
 12. `sudo systemctl start dpowdash` `sudo systemctl start dpowmqtt` - start the dashboard & mqtt client
 13. `sudo systemctl enable dpowdash` `sudo systemctl enable dpowmqtt` - start the services on boot
 
+If modifying the source of the dpow server:
+1. In dpow.py: Change the `post_url = "https://dpow-api.nanos.cc/upcheck/"`
+2. In templates/footer.html: Change the `mqtt.connect('wss://client:client@dpow-api.nanos.cc')`
+
 After the service is running, you must configure Nginx to proxy requests
 1. `sudo vim /etc/nginx/sites-available/dpowdash`
 2. Update the file as below:  
@@ -42,7 +46,7 @@ server {
 
     location / {
         include proxy_params;
-        proxy_pass http://unix:/home/{YOUR_USER}/dpow-mqtt/dpowdash.sock;
+        proxy_pass http://localhost:8000;
     }
 }
 ```
@@ -51,13 +55,6 @@ server {
 &nbsp;&nbsp;4\. Test for syntax errors: `sudo nginx -t`<br/>
 &nbsp;&nbsp;5\. If no errors: `sudo systemctl restart nginx`<br/>
 &nbsp;&nbsp;6\. Ensure that Nginx is allowed: `sudo ufw allow 'Nginx Full'`
-
-The final step is to set up a cron job to run the log updates every 24 hours.  This gives 
-the client_log and service_log their information to generate the change over 24 hours.
-1. Ensure the log_update.sh file is executable: `sudo chmod +x log_update.sh`
-2. Run `sudo crontab -e` and select whatever editor you're comfortable with.
-3. Insert the following line at the end of the file: `0 2 * * * {YOUR_USERNAME} /path/to/dpow-mqtt/log_update.sh`
-4. Update log_update.sh to direct to the correct path of config.ini: `/path/to/dpow-mqtt/config.ini`
 
 You should now be able to navigate to `http://{YOUR_DOMAIN}` to access the dashboard.
 HTTPS is recommended, but not required.  For more information, google Certbot to easily generate a 
