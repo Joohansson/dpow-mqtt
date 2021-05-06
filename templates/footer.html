@@ -251,7 +251,8 @@ function initMqtt(){
     'work/#',
     'client/#',
     'service/#',
-    'result/#'
+    'result/#',
+    'statistics'
   ]);
 
   client.on("message", function (topic, payload) {
@@ -273,7 +274,6 @@ function initMqtt(){
       work_map.set(block_hash, timestamp);
     } else if (message_type == 'result') {
 
-      // Currently don't get the result topic for some reason so this is put in the client message
       var splits = payload.split(',');
       var client = splits[1];
       var block_hash = splits[0];
